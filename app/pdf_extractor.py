@@ -95,6 +95,7 @@ def _merge_line(spans):
         'text': full_text,
         'bbox': [x0, y0, x1, y1],
         'font_size': dominant['font_size'],
+        'font_name': dominant['font_name'],
         'color': dominant['color'],
         'is_bold': dominant['is_bold'],
         'is_italic': dominant['is_italic'],
