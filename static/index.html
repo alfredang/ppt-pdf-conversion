@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF to PPTX Converter</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 48px;
+            width: 100%;
+            max-width: 520px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+
+        .drop-zone {
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 48px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fafbfc;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .drop-zone-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        .drop-zone-text {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .drop-zone-text strong {
+            color: #3b82f6;
+        }
+
+        .file-name {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #374151;
+            font-weight: 500;
+        }
+
+        input[type="file"] { display: none; }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover { background: #2563eb; }
+
+        .btn-primary:disabled {
+            background: #93c5fd;
+            cursor: not-allowed;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover { background: #059669; }
+
+        .progress-section {
+            display: none;
+            margin-top: 24px;
+        }
+
+        .progress-bar-container {
+            background: #e5e7eb;
+            border-radius: 8px;
+            height: 8px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            border-radius: 8px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .progress-bar.indeterminate {
+            width: 30%;
+            animation: indeterminate 1.5s infinite ease-in-out;
+        }
+
+        @keyframes indeterminate {
+            0% { margin-left: 0; }
+            50% { margin-left: 70%; }
+            100% { margin-left: 0; }
+        }
+
+        .status-text {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .log {
+            margin-top: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 12px;
+            color: #9ca3af;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            line-height: 1.6;
+        }
+
+        .download-section { display: none; margin-top: 20px; }
+
+        .error-text {
+            color: #ef4444;
+            font-size: 13px;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PDF / PPTX Converter</h1>
+        <p class="subtitle">Upload a PDF or PPTX to translate Chinese to English</p>
+
+        <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-icon">📄</div>
+            <div class="drop-zone-text">
+                Drag & drop your PDF or PPTX here or <strong>browse</strong>
+            </div>
+            <div class="file-name" id="fileName"></div>
+        </div>
+        <input type="file" id="fileInput" accept=".pdf,.pptx">
+
+        <button class="btn btn-primary" id="convertBtn" disabled>Translate & Convert</button>
+
+        <div class="progress-section" id="progressSection">
+            <div class="progress-bar-container">
+                <div class="progress-bar indeterminate" id="progressBar"></div>
+            </div>
+            <div class="status-text" id="statusText">Starting conversion...</div>
+            <div class="log" id="log"></div>
+        </div>
+
+        <div class="download-section" id="downloadSection">
+            <button class="btn btn-success" id="downloadBtn">Download PPTX</button>
+        </div>
+
+        <div class="error-text" id="errorText"></div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const convertBtn = document.getElementById('convertBtn');
+        const progressSection = document.getElementById('progressSection');
+        const progressBar = document.getElementById('progressBar');
+        const statusText = document.getElementById('statusText');
+        const log = document.getElementById('log');
+        const downloadSection = document.getElementById('downloadSection');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const errorText = document.getElementById('errorText');
+
+        let selectedFile = null;
+
+        // Drag and drop
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length) {
+                const name = files[0].name.toLowerCase();
+                if (name.endsWith('.pdf') || name.endsWith('.pptx')) {
+                    selectFile(files[0]);
+                }
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) {
+                selectFile(fileInput.files[0]);
+            }
+        });
+
+        function selectFile(file) {
+            selectedFile = file;
+            fileName.textContent = file.name;
+            convertBtn.disabled = false;
+            errorText.textContent = '';
+            downloadSection.style.display = 'none';
+        }
+
+        convertBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            convertBtn.disabled = true;
+            progressSection.style.display = 'block';
+            downloadSection.style.display = 'none';
+            errorText.textContent = '';
+            log.innerHTML = '';
+
+            // Upload file
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                statusText.textContent = 'Uploading...';
+                const res = await fetch('/api/convert', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const data = await res.json();
+                const jobId = data.job_id;
+
+                // Listen for progress via SSE
+                statusText.textContent = 'Processing...';
+                const evtSource = new EventSource(`/api/status/${jobId}`);
+
+                evtSource.onmessage = (event) => {
+                    const msg = event.data;
+
+                    if (msg === 'DONE') {
+                        evtSource.close();
+                        progressBar.classList.remove('indeterminate');
+                        progressBar.style.width = '100%';
+                        statusText.textContent = 'Conversion complete!';
+                        downloadSection.style.display = 'block';
+
+                        downloadBtn.onclick = () => {
+                            window.location.href = `/api/download/${jobId}`;
+                        };
+                        return;
+                    }
+
+                    if (msg.startsWith('ERROR:')) {
+                        evtSource.close();
+                        progressBar.classList.remove('indeterminate');
+                        progressBar.style.width = '0%';
+                        errorText.textContent = msg;
+                        convertBtn.disabled = false;
+                        return;
+                    }
+
+                    // Update progress log
+                    const line = document.createElement('div');
+                    line.textContent = msg;
+                    log.appendChild(line);
+                    log.scrollTop = log.scrollHeight;
+                    statusText.textContent = msg;
+
+                    // Estimate progress from page numbers
+                    const match = msg.match(/(\d+)\/(\d+)/);
+                    if (match) {
+                        const pct = Math.round((parseInt(match[1]) / parseInt(match[2])) * 100);
+                        progressBar.classList.remove('indeterminate');
+                        progressBar.style.width = pct + '%';
+                    }
+                };
+
+                evtSource.onerror = () => {
+                    evtSource.close();
+                    errorText.textContent = 'Connection lost. Please try again.';
+                    convertBtn.disabled = false;
+                };
+
+            } catch (err) {
+                errorText.textContent = 'Upload failed: ' + err.message;
+                convertBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
